@@ -259,7 +259,7 @@ export default function CareerCopilotDashboard() {
             const formData = new FormData();
             formData.append("file", file);
             
-            // ✅ AGREGAMOS LA VARIABLE AQUÍ (Faltaba esta)
+            // AGREGAMOS LA VARIABLE AQUÍ (Faltaba esta)
             const res = await fetch(
                 `${import.meta.env.VITE_API_URL}/api/CoverLetter/generate/${evalId}?jobUrl=${encodeURIComponent(jobUrl)}`,
                 { method: "POST", body: formData }
