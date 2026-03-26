@@ -257,10 +257,13 @@ export default function CareerCopilotDashboard() {
         try {
             const formData = new FormData();
             formData.append("file", file);
+            
+            // ✅ AGREGAMOS LA VARIABLE AQUÍ (Faltaba esta)
             const res = await fetch(
-                `/api/CoverLetter/generate/${evalId}?jobUrl=${encodeURIComponent(jobUrl)}`,
+                `${import.meta.env.VITE_API_URL}/api/CoverLetter/generate/${evalId}?jobUrl=${encodeURIComponent(jobUrl)}`,
                 { method: "POST", body: formData }
             );
+            
             if (!res.ok) throw new Error(await res.text());
             const data = await res.json();
             setCoverLetter(data.coverLetter);
