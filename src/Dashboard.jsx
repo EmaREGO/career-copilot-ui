@@ -198,23 +198,24 @@ export default function CareerCopilotDashboard() {
   // ── Polling ────────────────────────────────────────────────────────────────
     const pollStatus = useCallback((id) => {
         pollRef.current = setInterval(async () => {
-        try {
-            const res = await fetch(`/api/Evaluation/${id}`);
-            const data = await res.json();
-            if (data.status === "Completed") {
-            clearInterval(pollRef.current);
-            setAnalysis(data.analysis);
-            setStatus("completed");
-            } else if (data.status === "Failed") {
-            clearInterval(pollRef.current);
-            setErrorMsg("El análisis falló en el servidor.");
-            setStatus("error");
+            try {
+                
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/Evaluation/${id}`);
+                const data = await res.json();
+                if (data.status === "Completed") {
+                    clearInterval(pollRef.current);
+                    setAnalysis(data.analysis);
+                    setStatus("completed");
+                } else if (data.status === "Failed") {
+                    clearInterval(pollRef.current);
+                    setErrorMsg("El análisis falló en el servidor.");
+                    setStatus("error");
+                }
+            } catch {
+                clearInterval(pollRef.current);
+                setErrorMsg("Error al consultar el estado del análisis.");
+                setStatus("error");
             }
-        } catch {
-            clearInterval(pollRef.current);
-            setErrorMsg("Error al consultar el estado del análisis.");
-            setStatus("error");
-        }
         }, 3000);
     }, []);
 
@@ -223,22 +224,25 @@ export default function CareerCopilotDashboard() {
   // ── Submit ─────────────────────────────────────────────────────────────────
     const handleAnalyze = async () => {
         if (!file || !jobUrl.trim()) return;
-            setStatus("loading");
-            setErrorMsg("");
-            setAnalysis(null);
-            setCoverLetter("");
+        setStatus("loading");
+        setErrorMsg("");
+        setAnalysis(null);
+        setCoverLetter("");
         try {
             const formData = new FormData();
             formData.append("file", file);
-            const res = await fetch(`/api/Evaluation/analyze?jobUrl=${encodeURIComponent(jobUrl)}`, {
+            
+            //
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/Evaluation/analyze?jobUrl=${encodeURIComponent(jobUrl)}`, {
                 method: "POST",
                 body: formData,
             });
+            
             if (!res.ok) throw new Error(await res.text());
-                const data = await res.json();
-                setEvalId(data.evaluationId);
-                setStatus("processing");
-                pollStatus(data.evaluationId);
+            const data = await res.json();
+            setEvalId(data.evaluationId);
+            setStatus("processing");
+            pollStatus(data.evaluationId);
         } 
         catch (e) {
             setErrorMsg(e.message || "Error al iniciar el análisis.");
