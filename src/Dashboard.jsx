@@ -228,6 +228,7 @@ export default function CareerCopilotDashboard() {
         setErrorMsg("");
         setAnalysis(null);
         setCoverLetter("");
+        console.log("Conectando a:", import.meta.env.VITE_API_URL);
         try {
             const formData = new FormData();
             formData.append("file", file);
