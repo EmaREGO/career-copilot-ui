@@ -186,40 +186,67 @@ function Dropzone({ file, onFile }) {
 export default function CareerCopilotDashboard() {
     const [file, setFile] = useState(null);
     const [jobUrl, setJobUrl] = useState("");
-    const [status, setStatus] = useState("idle"); // idle | loading | processing | completed | error
+    const [status, setStatus] = useState("idle"); 
     const [evalId, setEvalId] = useState(null);
     const [analysis, setAnalysis] = useState(null);
     const [coverLetter, setCoverLetter] = useState("");
     const [coverLoading, setCoverLoading] = useState(false);
     const [copied, setCopied] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
+    const [history, setHistory] = useState([]);
+    const [showHistory, setShowHistory] = useState(false);
     const pollRef = useRef(null);
+
+    const fetchEvaluationDetails = async (id) => {
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/Evaluation/${id}`);
+            const data = await res.json();
+            
+            if (data.status === "Completed") {
+                setAnalysis(data.analysis);
+                setEvalId(data.id);
+                setStatus("completed");
+                return true; // Terminó
+            } else if (data.status === "Failed") {
+                setErrorMsg("El análisis falló en el servidor.");
+                setStatus("error");
+                return true; // Terminó (con error)
+            }
+            return false; // Sigue pendiente
+        } catch (e) {
+            console.error("Error fetching eval:", e);
+            return false;
+        }
+    };
+
+    const loadHistory = async () => {
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/Evaluation/history`);
+            const data = await res.json();
+            setHistory(data);
+        } catch (e) { console.error("Error cargando historial", e); }
+    };
+
+    useEffect(() => { loadHistory(); }, []);
 
   // ── Polling ────────────────────────────────────────────────────────────────
     const pollStatus = useCallback((id) => {
+        if (pollRef.current) clearInterval(pollRef.current);
         pollRef.current = setInterval(async () => {
-            try {
-                
-                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/Evaluation/${id}`);
-                const data = await res.json();
-                if (data.status === "Completed") {
-                    clearInterval(pollRef.current);
-                    setAnalysis(data.analysis);
-                    setStatus("completed");
-                } else if (data.status === "Failed") {
-                    clearInterval(pollRef.current);
-                    setErrorMsg("El análisis falló en el servidor.");
-                    setStatus("error");
-                }
-            } catch {
-                clearInterval(pollRef.current);
-                setErrorMsg("Error al consultar el estado del análisis.");
-                setStatus("error");
-            }
+            const isDone = await fetchEvaluationDetails(id);
+            if (isDone) clearInterval(pollRef.current);
         }, 3000);
     }, []);
 
-    useEffect(() => () => clearInterval(pollRef.current), []);
+    const handleSelectHistory = async (id) => {
+        setStatus("loading");
+        setShowHistory(false);
+        const isDone = await fetchEvaluationDetails(id);
+        if (!isDone) {
+            setStatus("processing");
+            pollStatus(id);
+        }
+    };
 
   // ── Submit ─────────────────────────────────────────────────────────────────
     const handleAnalyze = async () => {
@@ -317,6 +344,42 @@ export default function CareerCopilotDashboard() {
         </div>
 
         <div className="relative max-w-6xl mx-auto px-4 py-10">
+            {/* Botón para abrir historial */}
+            <button 
+                onClick={() => { setShowHistory(true); loadHistory(); }}
+                className="fixed top-6 right-6 z-50 flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-700/50 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/30 transition-all shadow-xl"
+            >
+                <RotateCcw size={16} /> Historial
+            </button>
+
+            {/* Panel Lateral de Historial */}
+            {showHistory && (
+                <div className="fixed inset-0 z-[60] flex justify-end">
+                    <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setShowHistory(false)} />
+                    <div className="relative w-80 h-full bg-slate-900 border-l border-slate-800 p-6 shadow-2xl animate-fade-in-right">
+                        <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                            <Briefcase size={18} className="text-emerald-400" /> Análisis Pasados
+                        </h3>
+                        <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-120px)] pr-2 scrollbar-thin">
+                            {history.map((item) => (
+                                <div 
+                                    key={item.id}
+                                    onClick={() => { pollStatus(item.id); setShowHistory(false); setStatus("processing"); }}
+                                    className="p-3 rounded-xl border border-slate-800 bg-slate-800/40 hover:border-emerald-500/50 cursor-pointer transition-all group"
+                                >
+                                    <div className="flex justify-between items-start mb-1">
+                                        <Tag label={`${item.globalMatchPercentage || 0}%`} color={item.globalMatchPercentage > 70 ? 'emerald' : 'amber'} />
+                                        <span className="text-[10px] text-slate-500">{new Date(item.createdAt).toLocaleDateString()}</span>
+                                    </div>
+                                    <p className="text-xs text-slate-400 truncate group-hover:text-slate-200">
+                                        {item.vacancyUrl}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* Header */}
             <header className="mb-10">
             <div className="flex items-center gap-3 mb-2">
@@ -399,6 +462,15 @@ export default function CareerCopilotDashboard() {
                     <AlertTriangle size={16} className="text-red-400 shrink-0" />
                     <p className="text-xs text-red-300">{errorMsg}</p>
                 </div>
+                )}
+
+
+                {/* Industry Badge (NUEVO) */}
+                {status === "completed" && analysis?.detected_industry && (
+                    <div className="px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+                        <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Industria Detectada</span>
+                        <Tag label={analysis.detected_industry} color="emerald" />
+                    </div>
                 )}
 
                 {/* Complexity Score */}
@@ -564,7 +636,43 @@ export default function CareerCopilotDashboard() {
                 </div>
                 )}
             </div>
-            </div>
+        </div>
+
+                {/* Sidebar de Historial (CON ANIMACIÓN CORREGIDA) */}
+            {showHistory && (
+                <div className="fixed inset-0 z-[60] flex justify-end">
+                    <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={() => setShowHistory(false)} />
+                    <div className="relative w-85 h-full bg-slate-900 border-l border-slate-800 p-6 shadow-2xl animate-slide-in">
+                        <div className="flex items-center justify-between mb-8">
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                <RotateCcw size={18} className="text-emerald-400" /> Historial
+                            </h3>
+                            <button onClick={() => setShowHistory(false)} className="text-slate-500 hover:text-white">✕</button>
+                        </div>
+                        <div className="space-y-3 overflow-y-auto h-[calc(100vh-120px)] pr-2 scrollbar-thin">
+                            {history.length === 0 ? (
+                                <p className="text-center text-slate-600 text-sm mt-10">No hay análisis previos.</p>
+                            ) : (
+                                history.map((item) => (
+                                    <div 
+                                        key={item.id}
+                                        onClick={() => handleSelectHistory(item.id)}
+                                        className="p-4 rounded-xl border border-slate-800 bg-slate-800/40 hover:border-emerald-500/50 hover:bg-slate-800/60 cursor-pointer transition-all group"
+                                    >
+                                        <div className="flex justify-between items-center mb-2">
+                                            <Tag label={`${item.globalMatchPercentage || 0}%`} color={item.globalMatchPercentage > 70 ? 'emerald' : 'amber'} />
+                                            <span className="text-[10px] text-slate-500">{new Date(item.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                        <p className="text-[11px] text-slate-400 break-all line-clamp-2 leading-relaxed">
+                                            {item.vacancyUrl}
+                                        </p>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Footer */}
             <footer className="mt-12 pt-6 border-t border-slate-800/60 flex items-center justify-between">
@@ -584,6 +692,8 @@ export default function CareerCopilotDashboard() {
             .scrollbar-thin::-webkit-scrollbar-thumb { background: #334155; border-radius: 99px; }
             .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #475569; }
             .scrollbar-thin { scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+            @keyframes slide-in { from { transform: translateX(100%); } to { transform: translateX(0); }}
+            .animate-slide-in { animation: slide-in 0.3s ease-out forwards; }
         `}</style>
         </div>
     );
