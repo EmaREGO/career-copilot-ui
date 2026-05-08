@@ -252,29 +252,30 @@ export default function CareerCopilotDashboard() {
     const handleAnalyze = async () => {
         if (!file || !jobUrl.trim()) return;
         setStatus("loading");
-        setErrorMsg("");
-        setAnalysis(null);
-        setCoverLetter("");
-
+        
         try {
             const formData = new FormData();
-            // IMPORTANTE: Deben ser idénticos a los nombres en C#
-            formData.append("File", file);     
-            formData.append("JobUrl", jobUrl); // <-- ESTA LÍNEA ES LA QUE FALTA
+            formData.append("File", file);      
+            formData.append("JobUrl", jobUrl);  
 
+            // La URL ya NO debe llevar el ?jobUrl=...
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/Evaluation/analyze`, {
                 method: "POST",
-                body: formData, // El backend leerá File y JobUrl de aquí
+                body: formData, // Aquí ya viajan el archivo y la URL
             });
 
-            if (!res.ok) throw new Error(await res.text());
+            if (!res.ok) {
+                const errorText = await res.text();
+                throw new Error(errorText);
+            }
+
             const data = await res.json();
             setEvalId(data.evaluationId);
             setStatus("processing");
             pollStatus(data.evaluationId);
-        } 
-        catch (e) {
-            setErrorMsg(e.message || "Error al iniciar el análisis.");
+        } catch (e) {
+            console.error(e);
+            setErrorMsg("Error: " + e.message);
             setStatus("error");
         }
     };
