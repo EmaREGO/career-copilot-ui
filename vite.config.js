@@ -10,7 +10,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://localhost:7109',
+        target: 'https://career-copilot-api-tb5f.onrender.com',
         changeOrigin: true,
         secure: false,
       }
