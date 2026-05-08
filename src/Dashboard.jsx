@@ -258,12 +258,12 @@ export default function CareerCopilotDashboard() {
         console.log("Conectando a:", import.meta.env.VITE_API_URL);
         try {
             const formData = new FormData();
-            formData.append("file", file);
+            formData.append("File", file);
             
             //
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/Evaluation/analyze?jobUrl=${encodeURIComponent(jobUrl)}`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/Evaluation/analyze`, {
                 method: "POST",
-                body: formData,
+                body: formData, 
             });
             
             if (!res.ok) throw new Error(await res.text());
@@ -284,7 +284,7 @@ export default function CareerCopilotDashboard() {
         setCoverLoading(true);
         try {
             const formData = new FormData();
-            formData.append("file", file);
+            formData.append("File", file);
             
             // AGREGAMOS LA VARIABLE AQUÍ (Faltaba esta)
             const res = await fetch(
