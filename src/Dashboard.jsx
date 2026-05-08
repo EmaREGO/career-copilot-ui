@@ -255,17 +255,18 @@ export default function CareerCopilotDashboard() {
         setErrorMsg("");
         setAnalysis(null);
         setCoverLetter("");
-        
+
         try {
             const formData = new FormData();
-            formData.append("File", file);
-            formData.append("JobUrl", jobUrl);
-            
+            // IMPORTANTE: Deben ser idénticos a los nombres en C#
+            formData.append("File", file);     
+            formData.append("JobUrl", jobUrl); // <-- ESTA LÍNEA ES LA QUE FALTA
+
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/Evaluation/analyze`, {
                 method: "POST",
-                body: formData, 
+                body: formData, // El backend leerá File y JobUrl de aquí
             });
-            
+
             if (!res.ok) throw new Error(await res.text());
             const data = await res.json();
             setEvalId(data.evaluationId);
