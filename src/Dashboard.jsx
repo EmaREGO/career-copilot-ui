@@ -258,23 +258,18 @@ export default function CareerCopilotDashboard() {
             formData.append("File", file);      
             formData.append("JobUrl", jobUrl);  
 
-            // La URL ya NO debe llevar el ?jobUrl=...
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/Evaluation/analyze`, {
                 method: "POST",
-                body: formData, // Aquí ya viajan el archivo y la URL
+                body: formData, 
             });
 
-            if (!res.ok) {
-                const errorText = await res.text();
-                throw new Error(errorText);
-            }
+            if (!res.ok) throw new Error(await res.text());
 
             const data = await res.json();
             setEvalId(data.evaluationId);
             setStatus("processing");
             pollStatus(data.evaluationId);
         } catch (e) {
-            console.error(e);
             setErrorMsg("Error: " + e.message);
             setStatus("error");
         }
